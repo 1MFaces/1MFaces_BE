@@ -3,9 +3,10 @@
     "version": "1.0.0",
     "main": "index.js",
     "dependencies": {
-        "busboy": "^1.6.0",
-        "sharp": "^0.32.1",
         "aws-sdk": "^2.1542.0",
-        "cloudinary": "^1.38.0"
+        "busboy": "^1.6.0",
+        "cloudinary": "^1.38.0",
+        "mongodb": "^6.18.0",
+        "sharp": "^0.32.1"
     }
 }
