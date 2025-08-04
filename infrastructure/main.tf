@@ -11,6 +11,8 @@ resource "aws_lambda_function" "upload_photo" {
       CLOUDINARY_CLOUD_NAME = var.cloudinary_cloud_name
       CLOUDINARY_API_KEY    = var.cloudinary_api_key
       CLOUDINARY_API_SECRET = var.cloudinary_api_secret
+      MONGODB_DB            = var.mongodb_db
+      MONGODB_URI           = var.mongodb_uri
     }
   }
 
