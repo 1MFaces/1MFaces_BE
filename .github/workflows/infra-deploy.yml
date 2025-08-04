@@ -1,0 +1,51 @@
+name: Deploy Terraform Infra
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy with Terraform
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write   #Required for OIDC
+      contents: read
+
+    env:
+      TF_VAR_cloudinary_cloud_name: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+      TF_VAR_cloudinary_api_key: ${{ secrets.CLOUDINARY_API_KEY }}
+      TF_VAR_cloudinary_api_secret: ${{ secrets.CLOUDINARY_API_SECRET }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-terraform-role 
+          aws-region: eu-west-2
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.6
+
+      # Optional: Build & zip Lambda code dynamically
+      - name: Install Lambda deps and zip
+        working-directory: infrastructure/lambda
+        run: |
+          npm ci
+          zip -r ../lambda_upload.zip .
+
+      - name: Terraform Init
+        working-directory: infrastructure
+        run: terraform init
+
+      - name: Terraform Apply
+        working-directory: infrastructure
+        run: terraform apply -auto-approve
