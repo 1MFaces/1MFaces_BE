@@ -9,3 +9,11 @@ variable "cloudinary_api_key" {
 variable "cloudinary_api_secret" {
   type = string
 }
+
+variable "mongodb_uri" {
+  type = string
+}
+
+variable "mongodb_db" {
+  type = string
+}
