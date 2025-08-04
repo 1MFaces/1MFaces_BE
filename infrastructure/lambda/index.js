@@ -14,6 +14,7 @@ cloudinary.config({
 });
 
 // MongoDB setup
+//TODO: hide uri as it is exposed in lambda env var
 const mongoClient = new MongoClient(process.env.MONGODB_URI, {
     maxPoolSize: 2,
 });
@@ -61,7 +62,7 @@ exports.handler = async (event) => {
             event.isBase64Encoded ? "base64" : "utf8"
         );
 
-        const fileBuffer = await parseMultipart(buffer, contentType);
+        const { fileBuffer, fields } = await parseMultipart(buffer, contentType);
         if (!fileBuffer) {
             return {
                 statusCode: 400,
@@ -100,6 +101,10 @@ exports.handler = async (event) => {
             width: result.width,
             height: result.height,
             format: result.format,
+            // Optional metadata
+            age: fields.age ? parseInt(fields.age) : undefined,
+            gender: fields.gender || undefined,
+            tags: fields.tags ? fields.tags.split(",").map((t) => t.trim()) : undefined,
         });
 
         return {
@@ -120,6 +125,7 @@ function parseMultipart(buffer, contentType) {
     return new Promise((resolve, reject) => {
         const bb = busboy({ headers: { "content-type": contentType } });
         let fileBuffer = null;
+        const fields = {};
 
         bb.on("file", (fieldname, file) => {
             const chunks = [];
@@ -129,7 +135,11 @@ function parseMultipart(buffer, contentType) {
             });
         });
 
-        bb.on("finish", () => resolve(fileBuffer));
+        bb.on("field", (fieldname, val) => {
+            fields[fieldname] = val;
+        });
+
+        bb.on("finish", () => resolve({ fileBuffer, fields }));
         bb.on("error", (err) => reject(err));
         bb.end(buffer);
     });
