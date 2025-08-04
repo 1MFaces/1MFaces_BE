@@ -2,6 +2,7 @@ const aws = require("aws-sdk");
 const sharp = require("sharp");
 const busboy = require("busboy");
 const cloudinary = require("cloudinary").v2;
+const { MongoClient } = require("mongodb");
 const { isRateLimited } = require("./ip-cache");
 
 const rekognition = new aws.Rekognition({ region: "eu-west-2" });
@@ -12,6 +13,20 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+// MongoDB setup
+const mongoClient = new MongoClient(process.env.MONGODB_URI, {
+    maxPoolSize: 2,
+});
+let db = null;
+async function getDb() {
+    if (!db) {
+        await mongoClient.connect();
+        db = mongoClient.db(process.env.MONGODB_DB || "faces");
+    }
+    return db;
+}
+
+// Lambda entrypoint
 exports.handler = async (event) => {
     // For HTTP API Gateway, httpMethod is inside requestContext.http.method
     const ip = event.requestContext?.http?.sourceIp || "unknown";
@@ -22,12 +37,7 @@ exports.handler = async (event) => {
 
     const method =
         event.httpMethod ||
-        (event.requestContext &&
-            event.requestContext.http &&
-            event.requestContext.http.method);
-
-    console.log("HTTP method:", method);
-    console.log("Event headers:", event.headers);
+        event.requestContext?.http?.method;
 
     if (method !== "POST") {
         return {
@@ -77,6 +87,21 @@ exports.handler = async (event) => {
         // Upload to Cloudinary
         const result = await uploadToCloudinary(resizedBuffer);
 
+        // Save metadata to MongoDB
+        const db = await getDb();
+        const collection = db.collection("photos");
+
+        await collection.insertOne({
+            url: result.secure_url,
+            createdAt: new Date(),
+            ip,
+            source: "lambda",
+            cloudinaryId: result.public_id,
+            width: result.width,
+            height: result.height,
+            format: result.format,
+        });
+
         return {
             statusCode: 200,
             body: JSON.stringify({ url: result.secure_url }),
@@ -90,13 +115,13 @@ exports.handler = async (event) => {
     }
 };
 
-// Multipart/form-data parser
+// Multipart parser
 function parseMultipart(buffer, contentType) {
     return new Promise((resolve, reject) => {
         const bb = busboy({ headers: { "content-type": contentType } });
         let fileBuffer = null;
 
-        bb.on("file", (fieldname, file, filename, encoding, mimetype) => {
+        bb.on("file", (fieldname, file) => {
             const chunks = [];
             file.on("data", (data) => chunks.push(data));
             file.on("end", () => {
@@ -104,14 +129,8 @@ function parseMultipart(buffer, contentType) {
             });
         });
 
-        bb.on("finish", () => {
-            resolve(fileBuffer);
-        });
-
-        bb.on("error", (err) => {
-            reject(err);
-        });
-
+        bb.on("finish", () => resolve(fileBuffer));
+        bb.on("error", (err) => reject(err));
         bb.end(buffer);
     });
 }
