@@ -83,6 +83,19 @@ exports.handler = async (event) => {
             };
         }
 
+        // Connect to DB
+        const db = await getDb();
+        const collection = db.collection("photos");
+
+        // Check if coordinates already taken
+        const existingPhoto = await collection.findOne({ x, y });
+        if (existingPhoto) {
+            return {
+                statusCode: 409, // Conflict
+                body: JSON.stringify({ message: "A photo already exists at these coordinates" }),
+            };
+        }
+
         // Resize image
         const resizedBuffer = await sharp(fileBuffer)
             .resize(1024, 1024, { fit: "inside" })
@@ -102,9 +115,6 @@ exports.handler = async (event) => {
         const result = await uploadToCloudinary(resizedBuffer);
 
         // Save metadata to MongoDB
-        const db = await getDb();
-        const collection = db.collection("photos");
-
         await collection.insertOne({
             url: result.secure_url,
             createdAt: new Date(),
