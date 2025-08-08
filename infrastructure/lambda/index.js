@@ -70,6 +70,17 @@ exports.handler = async (event) => {
             };
         }
 
+        // Parse and validate coordinates
+        const x = parseFloat(fields.x);
+        const y = parseFloat(fields.y);
+
+        if (isNaN(x) || isNaN(y)) {
+            return {
+                statusCode: 400,
+                body: JSON.stringify({ message: "Missing or invalid x/y coordinates" }),
+            };
+        }
+
         // Resize image
         const resizedBuffer = await sharp(fileBuffer)
             .resize(1024, 1024, { fit: "inside" })
@@ -101,6 +112,9 @@ exports.handler = async (event) => {
             width: result.width,
             height: result.height,
             format: result.format,
+            // Mandatory coordinates
+            x,
+            y,
             // Optional metadata
             age: fields.age ? parseInt(fields.age) : undefined,
             gender: fields.gender || undefined,
