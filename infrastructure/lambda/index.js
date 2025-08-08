@@ -63,6 +63,8 @@ exports.handler = async (event) => {
         );
 
         const { fileBuffer, fields } = await parseMultipart(buffer, contentType);
+        console.log("Parsed fields:", fields);
+
         if (!fileBuffer) {
             return {
                 statusCode: 400,
