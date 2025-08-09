@@ -1,19 +1,26 @@
 const { MongoClient } = require('mongodb');
 
 let cachedClient = null;
+let cachedDb = null;
 
 const uri = process.env.MONGODB_URI;
 const dbName = process.env.MONGODB_DB;
 const collectionName = 'photosMetadata';
 
 async function connectToDB() {
-    if (cachedClient && cachedClient.isConnected()) {
-        return cachedClient;
+    if (cachedClient && cachedDb) {
+        return { client: cachedClient, db: cachedDb };
     }
-    const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+
+    const client = new MongoClient(uri);
     await client.connect();
+
+    const db = client.db(dbName);
+
     cachedClient = client;
-    return client;
+    cachedDb = db;
+
+    return { client, db };
 }
 
 exports.handler = async (event) => {
@@ -21,16 +28,15 @@ exports.handler = async (event) => {
         // Parse query params from event (example: bounding box or grid coords)
         const { startX, endX, startY, endY } = event.queryStringParameters || {};
 
-        // Validation
-        if (!startX || !endX || !startY || !endY) {
+        if (startX === undefined || endX === undefined || startY === undefined || endY === undefined) {
             return {
                 statusCode: 400,
                 body: JSON.stringify({ error: 'Missing coordinates' }),
             };
         }
 
-        const client = await connectToDB();
-        const collection = client.db(dbName).collection(collectionName);
+        const { db } = await connectToDB();
+        const collection = db.collection(collectionName);
 
         // Query MongoDB for photos metadata within the given coordinates (assuming fields x, y)
         const photos = await collection
