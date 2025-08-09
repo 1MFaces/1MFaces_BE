@@ -5,7 +5,7 @@ let cachedDb = null;
 
 const uri = process.env.MONGODB_URI;
 const dbName = process.env.MONGODB_DB;
-const collectionName = 'photosMetadata';
+const collectionName = 'photos';
 
 async function connectToDB() {
     if (cachedClient && cachedDb) {
@@ -37,6 +37,8 @@ exports.handler = async (event) => {
 
         const { db } = await connectToDB();
         const collection = db.collection(collectionName);
+        // console.log("Using DB:", dbName);
+        // console.log("Count:", await collection.countDocuments());
 
         // Query MongoDB for photos metadata within the given coordinates (assuming fields x, y)
         const photos = await collection
