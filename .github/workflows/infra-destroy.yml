@@ -40,7 +40,7 @@ jobs:
 
       - name: Terraform Destroy
         working-directory: infrastructure
-        run: terraform destroy -auto-approve \
-          -target=aws_lambda_function.pull_faces \
-          -target=aws_lambda_permission.allow_pull_faces_api \
+        run: terraform destroy -auto-approve \ 
+          -target=aws_lambda_function.pull_faces \ 
+          -target=aws_lambda_permission.allow_pull_faces_api \ 
           -target=aws_apigatewayv2_integration.lambda_pull_faces_integration
