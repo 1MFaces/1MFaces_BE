@@ -1,0 +1,46 @@
+name: Destroy Pull Faces Lambda Infra
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Destroy with Terraform
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write   #Required for OIDC
+      contents: read
+
+    # env:
+    #   TF_VAR_cloudinary_cloud_name: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+    #   TF_VAR_cloudinary_api_key: ${{ secrets.CLOUDINARY_API_KEY }}
+    #   TF_VAR_cloudinary_api_secret: ${{ secrets.CLOUDINARY_API_SECRET }}
+    #   TF_VAR_mongodb_uri: ${{ secrets.MONGODB_URI }}
+    #   TF_VAR_mongodb_db: ${{ secrets.MONGODB_DB }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-terraform-role 
+          aws-region: eu-west-2
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.6
+
+      - name: Terraform Init
+        working-directory: infrastructure
+        run: terraform init
+
+      - name: Terraform Destroy
+        working-directory: infrastructure
+        run: terraform destroy -auto-approve \
+          -target=aws_lambda_function.pull_faces \
+          -target=aws_lambda_permission.allow_pull_faces_api \
+          -target=aws_apigatewayv2_integration.lambda_pull_faces_integration
