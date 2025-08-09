@@ -29,7 +29,7 @@ resource "aws_apigatewayv2_integration" "lambda_pull_faces_integration" {
   api_id                 = aws_apigatewayv2_api.photos_api.id
   integration_type       = "AWS_PROXY"
   integration_uri        = aws_lambda_function.pull_faces.invoke_arn
-  integration_method     = "GET"
+  integration_method     = "POST"
   payload_format_version = "2.0"
 }
 
