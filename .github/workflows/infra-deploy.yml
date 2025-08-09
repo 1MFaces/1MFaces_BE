@@ -37,11 +37,17 @@ jobs:
         with:
           terraform_version: 1.6.6
 
-      - name: Install Lambda deps and zip
-        working-directory: infrastructure/lambda
+      - name: Install Upload Lambda deps and zip
+        working-directory: infrastructure/lambda_upload
         run: |
           npm ci
           zip -r ../lambda_upload.zip .
+
+      - name: Install Pull Faces Lambda deps and zip
+        working-directory: infrastructure/lambda_pull_faces
+        run: |
+          npm ci
+          zip -r ../lambda_pull_faces.zip .
 
       - name: Terraform Init
         working-directory: infrastructure
